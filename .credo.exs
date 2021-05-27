@@ -49,12 +49,6 @@
       #
       checks: [
         #
-        ## Cuatro Checks
-        #
-        {Convene.Check.ModulenameMatchesFilename,
-         excluded: [~r(test/support/)]},
-
-        #
         ## Consistency Checks
         #
         {Credo.Check.Consistency.ExceptionNames},
