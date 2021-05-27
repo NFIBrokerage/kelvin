@@ -40,6 +40,46 @@ defmodule Kelvin.LinearSubscriptionTest do
         assert event.event.data == to_string(n)
       end
     end
+
+    test "a subscription catches up even if a tcp_closed occurs", c do
+      opts = [
+        producer_name: c.producer_name,
+        stream_name: c.stream_name,
+        restore_stream_position!: &restore_stream_position!/0,
+        test_proc: self()
+      ]
+
+      start_supervised!({MyLinearSupervisor, opts})
+
+      for n <- 0..100 do
+        assert_receive {:events, [event]}, 1_000
+        assert event.event.data == to_string(n)
+      end
+
+      monitor_ref =
+        ExtremeClient.Connection
+        |> GenServer.whereis()
+        |> Process.monitor()
+
+      send(ExtremeClient.Connection, {:tcp_closed, ""})
+
+      assert_receive {:DOWN, ^monitor_ref, _, _, _}
+
+      # we're hardcoding the restore_stream_position! function so this will
+      # restart from 0 instead of the current stream position as would be the
+      # case in a real-life system
+      for n <- 0..100 do
+        assert_receive {:events, [event]}, 10_000
+        assert event.event.data == to_string(n)
+      end
+
+      write_events(101..200, c.stream_name)
+
+      for n <- 101..200 do
+        assert_receive {:events, [event]}, 1_000
+        assert event.event.data == to_string(n)
+      end
+    end
   end
 
   defp restore_stream_position!, do: -1
