@@ -11,6 +11,16 @@ jobs:
     runs-on: ubuntu-16.04
     env:
       MIX_ENV: test
+      EVENTSTORE_HOST: localhost
+
+    services:
+      eventstore:
+        image: eventstore/eventstore:release-5.0.8
+        env:
+          EVENTSTORE_START_STANDARD_PROJECTIONS: True
+          EVENTSTORE_RUN_PROJECTIONS: All
+        ports:
+          - 1113:1113
 
     steps:
     - name: Checkout
