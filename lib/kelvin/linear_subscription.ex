@@ -4,6 +4,7 @@ defmodule Kelvin.LinearSubscription do
   """
 
   use GenStage
+  require Logger
 
   defstruct [:config, :subscription, :buffer, demand: 0]
 
@@ -13,7 +14,21 @@ defmodule Kelvin.LinearSubscription do
 
   @impl GenStage
   def init(opts) do
-    GenStage.async_info(self(), :subscribe)
+    state = %__MODULE__{config: Map.new(opts)}
+
+    identifier =
+      "#{inspect(__MODULE__)} (#{inspect(state.config[:name] || self())})"
+
+    if do_function(state.config.subscribe_on_init?) do
+      Logger.info("#{identifier} subscribing to '#{state.config.stream_name}'")
+
+      GenStage.async_info(self(), :subscribe)
+    else
+      # coveralls-ignore-start
+      Logger.info("#{identifier} did not subscribe to '#{state.config.stream_name}'")
+
+      # coveralls-ignore-stop
+    end
 
     {:producer, %__MODULE__{config: Map.new(opts)}}
   end
@@ -65,17 +80,14 @@ defmodule Kelvin.LinearSubscription do
       state.config.connection,
       self(),
       {state.config.stream_name,
-       restore!(state.config.restore_stream_position!) + 1, 256, true, false,
+       do_function(state.config.restore_stream_position!) + 1, 256, true, false,
        :infinity}
     )
   end
 
-  defp restore!(func) when is_function(func, 0), do: func.()
+  defp do_function(func) when is_function(func, 0), do: func.()
 
-  # coveralls-ignore-start
-  defp restore!({m, f, a}) when is_atom(m) and is_atom(f) and is_list(a) do
+  defp do_function({m, f, a}) when is_atom(m) and is_atom(f) and is_list(a) do
     apply(m, f, a)
   end
-
-  # coveralls-ignore-stop
 end

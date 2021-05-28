@@ -18,7 +18,8 @@ defmodule MyLinearSupervisor do
       name: producer_name,
       connection: ExtremeClient,
       stream_name: Keyword.fetch!(opts, :stream_name),
-      restore_stream_position!: Keyword.fetch!(opts, :restore_stream_position!)
+      restore_stream_position!: Keyword.fetch!(opts, :restore_stream_position!),
+      subscribe_on_init?: {Function, :identity, [true]}
     ]
 
     consumer_opts = [
