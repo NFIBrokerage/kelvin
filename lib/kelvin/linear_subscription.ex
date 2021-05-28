@@ -25,7 +25,9 @@ defmodule Kelvin.LinearSubscription do
       GenStage.async_info(self(), :subscribe)
     else
       # coveralls-ignore-start
-      Logger.info("#{identifier} did not subscribe to '#{state.config.stream_name}'")
+      Logger.info(
+        "#{identifier} did not subscribe to '#{state.config.stream_name}'"
+      )
 
       # coveralls-ignore-stop
     end
