@@ -29,7 +29,7 @@ defmodule Kelvin.InOrderSubscriptionTest do
       start_supervised!({MyInOrderSupervisor, opts})
 
       for n <- 0..100 do
-        assert_receive {:events, [event]}, 1_000
+        assert_receive {:events, [event]}, 6_000
         assert event.event.data == to_string(n)
       end
 
@@ -52,7 +52,7 @@ defmodule Kelvin.InOrderSubscriptionTest do
       start_supervised!({MyInOrderSupervisor, opts})
 
       for n <- 0..100 do
-        assert_receive {:events, [event]}, 1_000
+        assert_receive {:events, [event]}, 6_000
         assert event.event.data == to_string(n)
       end
 

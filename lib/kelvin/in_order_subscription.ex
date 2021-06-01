@@ -36,6 +36,13 @@ defmodule Kelvin.InOrderSubscription do
   def init(opts) do
     state = %__MODULE__{config: Map.new(opts)}
 
+    Process.send_after(self(), :check_auto_subscribe, Enum.random(3_000..5_000))
+
+    {:producer, state}
+  end
+
+  @impl GenStage
+  def handle_info(:check_auto_subscribe, state) do
     identifier =
       "#{inspect(__MODULE__)} (#{inspect(state.config[:name] || self())})"
 
@@ -52,10 +59,9 @@ defmodule Kelvin.InOrderSubscription do
       # coveralls-ignore-stop
     end
 
-    {:producer, %__MODULE__{config: Map.new(opts)}}
+    {:noreply, [], state}
   end
 
-  @impl GenStage
   def handle_info(:subscribe, state) do
     case subscribe(state) do
       {:ok, sub} ->
