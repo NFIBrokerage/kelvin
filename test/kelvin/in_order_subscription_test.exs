@@ -1,4 +1,4 @@
-defmodule Kelvin.LinearSubscriptionTest do
+defmodule Kelvin.InOrderSubscriptionTest do
   use ExUnit.Case, async: true
 
   @moduletag :capture_log

@@ -49,8 +49,8 @@ defmodule Kelvin.MixProject do
       # docs
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       # test
-      {:bless, "~> 1.0"},
-      {:credo, "~> 1.0"},
+      {:bless, "~> 1.0", only: :test},
+      {:credo, "~> 1.0", only: :test},
       {:excoveralls, "~> 0.7", only: :test}
     ]
   end

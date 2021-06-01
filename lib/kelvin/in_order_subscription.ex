@@ -1,6 +1,26 @@
-defmodule Kelvin.LinearSubscription do
+defmodule Kelvin.InOrderSubscription do
   @moduledoc """
-  A subscription producer which processes events in order
+  A subscription producer which processes events in order as they appear
+  in the EventStoreDB
+
+  ## Options
+
+  * `:name` - (optional) the GenServer name for this producer
+  * `:stream_name` - (required) the stream name to which to subscribe
+  * `:connection` - (required) the Extreme client module to use as a
+    connection to the EventStoreDB. This may either be the name of the
+    Extreme client module or its pid.
+  * `:restore_stream_position!` - (required) a function which determines
+    the stream position from which this listener should begin after initializing
+    or restarting. Values may be either an MFA tuple or a 0-arity anonymous
+    function.
+  * `:subscribe_on_init?` - (required) a function which determines whether
+    the producer should subscribe immediately after starting up. Values may
+    be either an MFA tuple or a 0-arity anonymous function. The function
+    should return either `true` to subscribe immediately on initialization or
+    `false` if the author intends on manually subscribing the producer. This
+    producer can be manually subscribed by `send/2`ing a message of
+    `:subscribe` to the process.
   """
 
   use GenStage
