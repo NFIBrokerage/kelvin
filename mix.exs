@@ -44,11 +44,13 @@ defmodule Kelvin.MixProject do
 
   defp deps do
     [
+      {:gen_stage, "~> 1.0"},
+      {:extreme, "~> 1.0"},
       # docs
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       # test
-      {:bless, "~> 1.0"},
-      {:credo, "~> 1.0"},
+      {:bless, "~> 1.0", only: :test},
+      {:credo, "~> 1.0", only: :test},
       {:excoveralls, "~> 0.7", only: :test}
     ]
   end
