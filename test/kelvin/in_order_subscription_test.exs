@@ -7,7 +7,7 @@ defmodule Kelvin.InOrderSubscriptionTest do
 
   setup do
     stream_name = "Kelvin.Test-#{UUID.uuid4()}"
-    producer_name = String.to_atom("Kelvin.LinearProducer-#{UUID.uuid4()}")
+    producer_name = String.to_atom("Kelvin.InOrderProducer-#{UUID.uuid4()}")
 
     [stream_name: stream_name, producer_name: producer_name]
   end
@@ -26,7 +26,7 @@ defmodule Kelvin.InOrderSubscriptionTest do
         test_proc: self()
       ]
 
-      start_supervised!({MyLinearSupervisor, opts})
+      start_supervised!({MyInOrderSupervisor, opts})
 
       for n <- 0..100 do
         assert_receive {:events, [event]}, 1_000
@@ -49,7 +49,7 @@ defmodule Kelvin.InOrderSubscriptionTest do
         test_proc: self()
       ]
 
-      start_supervised!({MyLinearSupervisor, opts})
+      start_supervised!({MyInOrderSupervisor, opts})
 
       for n <- 0..100 do
         assert_receive {:events, [event]}, 1_000

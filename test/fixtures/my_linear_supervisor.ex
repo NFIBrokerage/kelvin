@@ -1,4 +1,4 @@
-defmodule MyLinearSupervisor do
+defmodule MyInOrderSupervisor do
   @moduledoc """
   A supervisor module which spawns a supervision tree for a linear subscription
   pipeline.
@@ -28,8 +28,8 @@ defmodule MyLinearSupervisor do
     ]
 
     children = [
-      {Kelvin.LinearSubscription, producer_opts},
-      {MyLinearConsumer, consumer_opts}
+      {Kelvin.InOrderSubscription, producer_opts},
+      {MyInOrderConsumer, consumer_opts}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

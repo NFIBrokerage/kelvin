@@ -1,4 +1,4 @@
-defmodule MyLinearConsumer do
+defmodule MyInOrderConsumer do
   @moduledoc """
   A fixture consumer of events from a linear subscription
   """
