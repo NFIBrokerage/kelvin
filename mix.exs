@@ -60,7 +60,6 @@ defmodule Kelvin.MixProject do
       name: "kelvin",
       files: ~w(lib .formatter.exs mix.exs README.md .version),
       licenses: [],
-      organization: "cuatro",
       links: %{
         "GitHub" => @source_url,
         "Changelog" => @source_url <> "/blobs/main/CHANGELOG.md"
