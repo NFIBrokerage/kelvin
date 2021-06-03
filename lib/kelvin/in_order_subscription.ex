@@ -21,6 +21,9 @@ defmodule Kelvin.InOrderSubscription do
     `false` if the author intends on manually subscribing the producer. This
     producer can be manually subscribed by `send/2`ing a message of
     `:subscribe` to the process.
+  * `:catch_up_chunk_size` - (default: `256`) the number of events to query
+    for each read chunk while catching up. This option presents a trade-off
+    between network queries and query duration over the network.
   """
 
   use GenStage
@@ -104,12 +107,14 @@ defmodule Kelvin.InOrderSubscription do
   end
 
   defp subscribe(state) do
-    Extreme.RequestManager.read_and_stay_subscribed(
-      state.config.connection,
-      self(),
-      {state.config.stream_name,
-       do_function(state.config.restore_stream_position!) + 1, 256, true, false,
-       :infinity}
+    state.config.connection
+    |> Extreme.RequestManager._name()
+    |> GenServer.call(
+      {:read_and_stay_subscribed, self(),
+       {state.config.stream_name,
+        do_function(state.config.restore_stream_position!) + 1,
+        state.config[:catch_up_chunk_size] || 256, true, false, :infinity}},
+      :infinity
     )
   end
 
