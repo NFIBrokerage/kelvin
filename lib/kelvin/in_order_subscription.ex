@@ -107,13 +107,20 @@ defmodule Kelvin.InOrderSubscription do
   end
 
   defp subscribe(state) do
+    catch_up_chunk_size =
+      Map.get(
+        state.config,
+        :catch_up_chunk_size,
+        Application.get_env(:kelvin, :catch_up_chunk_size, 256)
+      )
+
     state.config.connection
     |> Extreme.RequestManager._name()
     |> GenServer.call(
       {:read_and_stay_subscribed, self(),
        {state.config.stream_name,
         do_function(state.config.restore_stream_position!) + 1,
-        state.config[:catch_up_chunk_size] || 256, true, false, :infinity}},
+        catch_up_chunk_size, true, false, :infinity}},
       :infinity
     )
   end
