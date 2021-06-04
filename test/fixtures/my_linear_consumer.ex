@@ -19,6 +19,7 @@ defmodule MyInOrderConsumer do
 
   @impl GenStage
   def handle_events(events, _from, test_proc) do
+    events = Enum.map(events, fn {_producer, event} -> event end)
     send(test_proc, {:events, events})
 
     {:noreply, [], test_proc}

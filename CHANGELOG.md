@@ -6,6 +6,15 @@ The format is based on [Keep a
 Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.0 - 2021-06-04
+
+### Changed
+
+- Events are now produced in the shape of `{producer, event}` instead of simply
+  `event`
+    - this allows a consumer to use the name of the producer to inform decisions
+      about how to store the stream position
+
 ## 0.2.2 - 2021-06-03
 
 ### Added

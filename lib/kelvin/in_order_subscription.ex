@@ -29,7 +29,7 @@ defmodule Kelvin.InOrderSubscription do
   use GenStage
   require Logger
 
-  defstruct [:config, :subscription, :buffer, demand: 0]
+  defstruct [:config, :subscription, :buffer, :self, demand: 0]
 
   def start_link(opts) do
     GenStage.start_link(__MODULE__, opts, Keyword.take(opts, [:name]))
@@ -37,7 +37,10 @@ defmodule Kelvin.InOrderSubscription do
 
   @impl GenStage
   def init(opts) do
-    state = %__MODULE__{config: Map.new(opts)}
+    state = %__MODULE__{
+      config: Map.new(opts),
+      self: Keyword.get(opts, :name, self())
+    }
 
     Process.send_after(self(), :check_auto_subscribe, Enum.random(3_000..5_000))
 
@@ -46,8 +49,7 @@ defmodule Kelvin.InOrderSubscription do
 
   @impl GenStage
   def handle_info(:check_auto_subscribe, state) do
-    identifier =
-      "#{inspect(__MODULE__)} (#{inspect(state.config[:name] || self())})"
+    identifier = "#{inspect(__MODULE__)} (#{inspect(state.self)})"
 
     if do_function(state.config.subscribe_on_init?) do
       Logger.info("#{identifier} subscribing to '#{state.config.stream_name}'")
@@ -88,7 +90,7 @@ defmodule Kelvin.InOrderSubscription do
         {:noreply, [], put_in(state.buffer, {event, from})}
 
       demand ->
-        {:reply, :ok, [event], put_in(state.demand, demand - 1)}
+        {:reply, :ok, [{state.self, event}], put_in(state.demand, demand - 1)}
     end
   end
 
@@ -98,7 +100,7 @@ defmodule Kelvin.InOrderSubscription do
       {event, from} ->
         GenStage.reply(from, :ok)
 
-        {:noreply, [event],
+        {:noreply, [{state.self, event}],
          %__MODULE__{state | demand: demand - 1, buffer: nil}}
 
       _ ->
