@@ -21,6 +21,10 @@ defmodule Kelvin.InOrderSubscription do
     `false` if the author intends on manually subscribing the producer. This
     producer can be manually subscribed by `send/2`ing a message of
     `:subscribe` to the process.
+  * `:subscribe_after` - (default: `Enum.random(3_000..5_000)`) the amount of
+    time to wait after initializing to query the `:subscribe_on_init?` option.
+    This can be useful to prevent all producers from trying to subscribe at
+    the same time and to await an active connection to the EventStoreDB.
   * `:catch_up_chunk_size` - (default: `256`) the number of events to query
     for each read chunk while catching up. This option presents a trade-off
     between network queries and query duration over the network.
@@ -42,7 +46,11 @@ defmodule Kelvin.InOrderSubscription do
       self: Keyword.get(opts, :name, self())
     }
 
-    Process.send_after(self(), :check_auto_subscribe, Enum.random(3_000..5_000))
+    Process.send_after(
+      self(),
+      :check_auto_subscribe,
+      opts[:subscribe_after] || Enum.random(3_000..5_000)
+    )
 
     {:producer, state}
   end
