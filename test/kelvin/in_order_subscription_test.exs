@@ -82,6 +82,35 @@ defmodule Kelvin.InOrderSubscriptionTest do
     end
   end
 
+  describe "given only a few events have been written to a stream" do
+    setup c do
+      write_events(0..10, c.stream_name)
+      :ok
+    end
+
+    test "a slow subscription catches up", c do
+      opts = [
+        producer_name: c.producer_name,
+        stream_name: c.stream_name,
+        restore_stream_position!: &restore_stream_position!/0,
+        test_proc: self(),
+        # note how we add an artificial bottleneck to the consumer here
+        sleep_time: 100,
+        # and tune down the catch-up (and therefore max buffer queue size)
+        catch_up_chunk_size: 1
+        # in order to simulate a consumer which is slow and get coverage
+        # on the supply-buffering we do with the queue
+      ]
+
+      start_supervised!({MyInOrderSupervisor, opts})
+
+      for n <- 0..10 do
+        assert_receive {:events, [event]}, 6_000
+        assert event.event.data == to_string(n)
+      end
+    end
+  end
+
   defp restore_stream_position!, do: -1
 
   defp write_events(range, stream) do

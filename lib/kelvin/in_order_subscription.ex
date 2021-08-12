@@ -33,7 +33,15 @@ defmodule Kelvin.InOrderSubscription do
   use GenStage
   require Logger
 
-  defstruct [:config, :subscription, :buffer, :self, demand: 0]
+  defstruct [
+    :config,
+    :subscription,
+    :self,
+    :max_buffer_size,
+    demand: 0,
+    buffer: :queue.new(),
+    buffer_size: 0
+  ]
 
   def start_link(opts) do
     GenStage.start_link(__MODULE__, opts, Keyword.take(opts, [:name]))
@@ -41,9 +49,17 @@ defmodule Kelvin.InOrderSubscription do
 
   @impl GenStage
   def init(opts) do
+    max_buffer_size =
+      Keyword.get(
+        opts,
+        :catch_up_chunk_size,
+        Application.get_env(:kelvin, :catch_up_chunk_size, 256)
+      )
+
     state = %__MODULE__{
       config: Map.new(opts),
-      self: Keyword.get(opts, :name, self())
+      self: Keyword.get(opts, :name, self()),
+      max_buffer_size: max_buffer_size
     }
 
     Process.send_after(
@@ -93,44 +109,59 @@ defmodule Kelvin.InOrderSubscription do
 
   @impl GenStage
   def handle_call({:on_event, event}, from, state) do
-    case state.demand do
-      0 ->
-        {:noreply, [], put_in(state.buffer, {event, from})}
+    # when the current demand is 0, we should
+    case state do
+      %{demand: 0, buffer_size: size, max_buffer_size: max}
+      when size + 1 == max ->
+        {:noreply, [], enqueue(state, {event, from})}
 
-      demand ->
+      %{demand: 0} ->
+        {:reply, :ok, [], enqueue(state, event)}
+
+      %{demand: demand} ->
         {:reply, :ok, [{state.self, event}], put_in(state.demand, demand - 1)}
     end
   end
 
   @impl GenStage
   def handle_demand(demand, state) do
-    case state.buffer do
-      {event, from} ->
+    dequeue_events(state, demand, [])
+  end
+
+  defp dequeue_events(%{buffer_size: size} = state, demand, events)
+       when size == 0 or demand == 0 do
+    {:noreply, :lists.reverse(events), put_in(state.demand, demand)}
+  end
+
+  defp dequeue_events(state, demand, events) do
+    case dequeue(state) do
+      {{:value, {event, from}}, state} ->
         GenStage.reply(from, :ok)
+        dequeue_events(state, demand - 1, [{state.self, event} | events])
 
-        {:noreply, [{state.self, event}],
-         %__MODULE__{state | demand: demand - 1, buffer: nil}}
+      {{:value, event}, state} ->
+        dequeue_events(state, demand - 1, [{state.self, event} | events])
+    end
+  end
 
-      _ ->
-        {:noreply, [], put_in(state.demand, demand)}
+  defp dequeue(state) do
+    case :queue.out(state.buffer) do
+      {:empty, buffer} ->
+        {:empty, %{state | buffer: buffer, buffer_size: 0}}
+
+      {value, buffer} ->
+        {value, %{state | buffer: buffer, buffer_size: state.buffer_size - 1}}
     end
   end
 
   defp subscribe(state) do
-    catch_up_chunk_size =
-      Map.get(
-        state.config,
-        :catch_up_chunk_size,
-        Application.get_env(:kelvin, :catch_up_chunk_size, 256)
-      )
-
     state.config.connection
     |> Extreme.RequestManager._name()
     |> GenServer.call(
       {:read_and_stay_subscribed, self(),
        {state.config.stream_name,
         do_function(state.config.restore_stream_position!) + 1,
-        catch_up_chunk_size, true, false, :infinity}},
+        state.max_buffer_size, true, false, :infinity}},
       :infinity
     )
   end
@@ -139,5 +170,13 @@ defmodule Kelvin.InOrderSubscription do
 
   defp do_function({m, f, a}) when is_atom(m) and is_atom(f) and is_list(a) do
     apply(m, f, a)
+  end
+
+  defp enqueue(state, element) do
+    %{
+      state
+      | buffer: :queue.in(element, state.buffer),
+        buffer_size: state.buffer_size + 1
+    }
   end
 end

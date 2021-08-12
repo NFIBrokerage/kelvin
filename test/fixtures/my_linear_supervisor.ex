@@ -19,12 +19,14 @@ defmodule MyInOrderSupervisor do
       connection: ExtremeClient,
       stream_name: Keyword.fetch!(opts, :stream_name),
       restore_stream_position!: Keyword.fetch!(opts, :restore_stream_position!),
-      subscribe_on_init?: {Function, :identity, [true]}
+      subscribe_on_init?: {Function, :identity, [true]},
+      catch_up_chunk_size: Keyword.get(opts, :catch_up_chunk_size, 256)
     ]
 
     consumer_opts = [
       test_proc: Keyword.fetch!(opts, :test_proc),
-      subscribe_to: [{producer_name, max_demand: 1}]
+      subscribe_to: [{producer_name, max_demand: 1}],
+      sleep_time: Keyword.get(opts, :sleep_time)
     ]
 
     children = [
