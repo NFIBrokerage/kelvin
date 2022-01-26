@@ -92,16 +92,22 @@ defmodule Kelvin.InOrderSubscription do
   end
 
   def handle_info(:subscribe, state) do
-    case subscribe(state) do
-      {:ok, sub} ->
-        Process.link(sub)
-        {:noreply, [], put_in(state.subscription, sub)}
-
+    if state.subscription do
       # coveralls-ignore-start
-      {:error, reason} ->
-        {:stop, reason, state}
+      Logger.warn("#{inspect(__MODULE__)} is already subscribed.")
+      # coveralls-ignore-stop
+    else
+      case subscribe(state) do
+        {:ok, sub} ->
+          Process.link(sub)
+          {:noreply, [], put_in(state.subscription, sub)}
 
-        # coveralls-ignore-stop
+        # coveralls-ignore-start
+        {:error, reason} ->
+          {:stop, reason, state}
+
+          # coveralls-ignore-stop
+      end
     end
   end
 
