@@ -9,9 +9,9 @@ GenStage/Broadway producers for Extreme
 ```elixir
 def deps do
   [
-    {:kelvin, "~> 1.0", organization: "cuatro"}
+    {:kelvin, "~> 1.0"}
   ]
 end
 ```
 
-Check out the docs here: https://cuatro.hexdocs.pm/kelvin
+Check out the docs here: https://hexdocs.pm/kelvin
