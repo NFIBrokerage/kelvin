@@ -152,7 +152,9 @@ defmodule Kelvin.InOrderSubscription do
 
   defp dequeue(state) do
     case :queue.out(state.buffer) do
+      # coveralls-ignore-start
       {:empty, buffer} ->
+        # coveralls-ignore-stop
         {:empty, %{state | buffer: buffer, buffer_size: 0}}
 
       {value, buffer} ->

@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :kelvin, ExtremeClient,
   db_type: :node,
