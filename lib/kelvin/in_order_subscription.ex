@@ -111,53 +111,99 @@ defmodule Kelvin.InOrderSubscription do
     end
   end
 
+  def handle_info(:caught_up, state) do
+    identifier = "#{inspect(__MODULE__)} (#{inspect(state.self)})"
+    Logger.info("#{identifier} is caught up (says reading subscription).")
+    {:noreply, [], state}
+  end
+
   def handle_info(_info, state), do: {:noreply, [], state}
 
   @impl GenStage
   def handle_call({:on_event, event}, from, state) do
+    identifier = "#{inspect(__MODULE__)} (#{inspect(state.self)})"
     # when the current demand is 0, we should
     case state do
       %{demand: 0, buffer_size: size, max_buffer_size: max}
       when size + 1 == max ->
+        Logger.info("""
+        #{identifier} on_event enqueue for last event for buffer.
+        buffer_size: #{size}, max_buffer_size: #{max}.
+        Event: #{inspect(event)}
+        """)
+
         {:noreply, [], enqueue(state, {event, from})}
 
       %{demand: 0} ->
+        Logger.info("""
+        #{identifier} on_event enqueue for demand: 0.
+        Event: #{inspect(event)}
+        """)
+
         {:reply, :ok, [], enqueue(state, event)}
 
       %{demand: demand} ->
+        Logger.info("""
+        #{identifier} on_event enqueue for demand: #{demand}.
+        Event: #{inspect(event)}
+        """)
+
         {:reply, :ok, [{state.self, event}], put_in(state.demand, demand - 1)}
     end
   end
 
   @impl GenStage
   def handle_demand(demand, state) do
+    identifier = "#{inspect(__MODULE__)} (#{inspect(state.self)})"
+    Logger.info("#{identifier} handle_demand: #{demand}")
     dequeue_events(state, demand, [])
   end
 
   defp dequeue_events(%{buffer_size: size} = state, demand, events)
        when size == 0 or demand == 0 do
+    identifier = "#{inspect(__MODULE__)} (#{inspect(state.self)})"
+
+    Logger.info(
+      "#{identifier} dequing for size or demand 0: (size: #{size}, demand: #{demand}"
+    )
+
     {:noreply, :lists.reverse(events), put_in(state.demand, demand)}
   end
 
   defp dequeue_events(state, demand, events) do
+    identifier = "#{inspect(__MODULE__)} (#{inspect(state.self)})"
+
     case dequeue(state) do
       {{:value, {event, from}}, state} ->
         GenStage.reply(from, :ok)
+
+        Logger.info(
+          "#{identifier} dequeing_events with reply for demand: #{demand}"
+        )
+
         dequeue_events(state, demand - 1, [{state.self, event} | events])
 
       {{:value, event}, state} ->
+        Logger.info("#{identifier} dequeing_events for demand: #{demand}")
         dequeue_events(state, demand - 1, [{state.self, event} | events])
     end
   end
 
   defp dequeue(state) do
+    identifier = "#{inspect(__MODULE__)} (#{inspect(state.self)})"
+
     case :queue.out(state.buffer) do
       # coveralls-ignore-start
       {:empty, buffer} ->
+        Logger.info("#{identifier} empty buffer after dequeue.")
         # coveralls-ignore-stop
         {:empty, %{state | buffer: buffer, buffer_size: 0}}
 
       {value, buffer} ->
+        Logger.info(
+          "#{identifier} buffer_size after dequeue: #{state.buffer_size - 1}, buffer len: #{:queue.len(buffer)}"
+        )
+
         {value, %{state | buffer: buffer, buffer_size: state.buffer_size - 1}}
     end
   end
@@ -181,6 +227,12 @@ defmodule Kelvin.InOrderSubscription do
   end
 
   defp enqueue(state, element) do
+    identifier = "#{inspect(__MODULE__)} (#{inspect(state.self)})"
+
+    Logger.info(
+      "#{identifier} enqueue call, buffer_size: #{state.buffer_size + 1}, buffer len: #{:queue.len(state.buffer) + 1}"
+    )
+
     %{
       state
       | buffer: :queue.in(element, state.buffer),
